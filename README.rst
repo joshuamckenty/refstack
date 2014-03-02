@@ -22,7 +22,7 @@ This is our documentation for how we get this set up::
   #       `alembic.ini` to get this working
   # PROTIP: if you just want to test this out, use `-n alembic_sqlite` to
   #         make a local sqlite db
-  #         $ alembic -n alembic_sqlite update head
+  #         $ alembic -n alembic_sqlite upgrade head
   alembic update head
 
   # Plug this bad boy into your server infrastructure.
@@ -30,7 +30,7 @@ This is our documentation for how we get this set up::
   # than we are.
   # For the most basic setup that you can try right now, just kick off
   # gunicorn:
-  gunicorn refstack.web:app
+  gunicorn -b 0.0.0.0:8000 refstack.web:app
 
   # To actually configure this winner, check out the config section and
   # crack open refstack.cfg in vim.
