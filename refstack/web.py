@@ -19,15 +19,16 @@ import flask
 from flask import abort, flash, request, redirect, url_for, \
     render_template, g, session, make_response, send_file
 
-from flask import g, session, render_template
 from flask_mail import Mail
 
 import json
+
 from refstack import app as base_app
 from refstack.extensions import db
 from refstack.extensions import oid
 from refstack.models import User
 from refstack.models import Vendor
+from refstack.models import Cloud
 
 from refstack.refstack_config import RefStackConfig
 from refstack.tools.tempest_tester import TempestTester
@@ -35,11 +36,7 @@ from refstack.tools.tempest_tester import TempestTester
 from refstack.models import Cloud
 
 
-# TODO(termie): transition all the routes below to blueprints
-# TODO(termie): use extensions setup from the create_app() call
-
 app = base_app.create_app()
-
 mail = Mail(app)
 
 
