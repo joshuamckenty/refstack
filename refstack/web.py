@@ -26,15 +26,12 @@ import json
 from refstack import app as base_app
 from refstack.extensions import db
 from refstack.extensions import oid
+
+from refstack.models import Cloud
 from refstack.models import User
 from refstack.models import Vendor
-from refstack.models import Cloud
-
 from refstack.refstack_config import RefStackConfig
 from refstack.tools.tempest_tester import TempestTester
-
-from refstack.models import Cloud
-
 
 app = base_app.create_app()
 mail = Mail(app)
@@ -267,8 +264,9 @@ def logout():
 
 @app.route('/test-cloud/<int:cloud_id>', methods=['GET', 'POST'])
 def test_cloud(cloud_id):
-    c = Cloud.query.filter_by(id=cloud_id).first()
+    """Handler for creating a new test."""
 
+    c = Cloud.query.filter_by(id=cloud_id).first()
     if not c:
         flash(u'Not a valid Cloud ID!')
         return redirect('/')
@@ -276,23 +274,15 @@ def test_cloud(cloud_id):
         flash(u"This isn't your cloud!")
 
     if request.method == 'POST':
-        #validate this biotch
-        if not request.form['label']:
+        REQUIRED_FIELDS = ('label', 'pw_user')
+        if not all(field in request.form for field in REQUIRED_FIELDS):
             flash(u'Error: All fields are required')
-        elif not request.form['pw_user']:
-            flash(u'Error: All fields are required')
-        # elif not request.form['pw_admin']:
-        #    flash(u'Error: All fields are required')
-        # elif not request.form['pw_alter_user']:
-        #    flash(u'Error: All fields are required')
         else:
-            ''' Construct confJSON with the passwords provided '''
             params = {}
             params['identity'] = {}
             params['identity']['password'] = request.form['pw_user']
             params['identity']['admin_password'] = request.form.get('pw_admin', '')
             params['identity']['alt_password'] = request.form.get('pw_alter_user', '')
-
             TempestTester().test_cloud(cloud_id, json.dumps(params))
 
             flash(u'Test Started!')
@@ -302,14 +292,14 @@ def test_cloud(cloud_id):
 
 
 @app.route('/get-script', methods=['GET'])
-def send_script():
+def get_script():
     """Return a generic python script to be run in the docker container."""
 
     return send_file('tools/execute_test.py', mimetype='text/plain')
 
 
 @app.route('/get-miniconf', methods=['GET'])
-def send_miniconf():
+def get_miniconf():
     """Return a JSON of mini tempest conf to the docker container."""
 
     test_id = request.args.get('test_id', '')
@@ -320,7 +310,7 @@ def send_miniconf():
 
 
 @app.route('/get-testcases', methods=['GET'])
-def send_testcases():
+def get_testcases():
     """Return a JSON of tempest test cases to the docker container."""
 
     test_id = request.args.get('test_id', '')
@@ -331,14 +321,14 @@ def send_testcases():
 
 
 @app.route('/post-result', methods=['POST'])
-def receive_result():
+def post_result():
     """Receive tempest test result from the docker container."""
 
-    test_id = request.args.get('test_id', '')
-    filename = '%s/test_%s.result' % (RefStackConfig().get_working_dir(),
-                                      test_id)
     f = request.files['file']
     if f:
+        test_id = request.args.get('test_id', '')
+        filename = '%s/test_%s.result' % (RefStackConfig().get_working_dir(),
+                                          test_id)
         f.save(filename)
         TempestTester(test_id).process_resultfile(filename)
         ''' TODO: Remove the uploaded file after processing '''
