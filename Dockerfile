@@ -1,3 +1,4 @@
+
 FROM ubuntu
 RUN apt-get update
 
@@ -29,9 +30,10 @@ RUN pip install -r /tempest/test-requirements.txt || true
 # the test environment, run tempest tests and upload the test results to RefStack
 # RUN wget http://${API_SERVER_ADDRESS}/get-script -O execute_test.py
 
-ADD ./
-RUN pip install -r refstack/requirements.txt
+ADD ./refstack/tools/execute_test.py /execute_test.py 
+ADD ./requirements.txt /requirements.txt
+RUN pip install -r /requirements.txt
 
 # Run the script
-RUN python /refstack/refstack/tools/execute_test.py ${API_SERVER_ADDRESS} ${TEST_ID} 'THE_CONF_JSON'
+RUN python /execute_test.py ${API_SERVER_ADDRESS} ${TEST_ID} 'THE_CONF_JSON'
 RUN echo "done"

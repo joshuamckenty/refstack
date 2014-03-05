@@ -190,6 +190,7 @@ class TempestTester(object):
                                'test_%s.dockerOutput' % self.test_id)
 
         cmd = 'nohup docker build - < %s > %s &' % (dockerFile, outFile)
+        os.environ['DOCKER_HOST'] = 'tcp://localhost:4243'
         os.system(cmd)
         print cmd
 
