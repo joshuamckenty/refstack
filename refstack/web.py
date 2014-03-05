@@ -19,33 +19,21 @@ import flask
 from flask import abort, flash, request, redirect, url_for, \
     render_template, g, session, make_response, send_file
 
-#from flask_openid import OpenID
-#from flask.ext.admin import Admin, BaseView, expose, AdminIndexView
-#from flask.ext.admin.contrib.sqlamodel import ModelView
-#from flask.ext.security import Security, \
-#    UserMixin, login_required
-#from wtforms import TextField
-import flask
-from flask import g, session, render_template
 from flask_mail import Mail
-
 from refstack import app as base_app
 from refstack.extensions import db
 from refstack.extensions import oid
+
+from refstack.models import Cloud
 from refstack.models import User
 from refstack.models import Vendor
+from refstack.refstack_config import RefStackConfig
+from refstack.tools.tempest_tester import TempestTester
 
 from refstack.refstack_config import RefStackConfig
 from refstack.tools.tempest_tester import TempestTester
 
-#from refstack.models import Cloud
-
-
-# TODO(termie): transition all the routes below to blueprints
-# TODO(termie): use extensions setup from the create_app() call
-
 app = base_app.create_app()
-
 mail = Mail(app)
 
 
@@ -128,7 +116,7 @@ def create_profile():
 @app.route('/delete-cloud/<int:cloud_id>', methods=['GET', 'POST'])
 def delete_cloud(cloud_id):
     """Delete function for clouds."""
-    c = db.Cloud.query.filter_by(id=cloud_id).first()
+    c = Cloud.query.filter_by(id=cloud_id).first()
 
     if not c:
         flash(u'Not a valid Cloud ID!')
@@ -143,7 +131,7 @@ def delete_cloud(cloud_id):
 
 @app.route('/edit-cloud/<int:cloud_id>', methods=['GET', 'POST'])
 def edit_cloud(cloud_id):
-    c = db.Cloud.query.filter_by(id=cloud_id).first()
+    c = Cloud.query.filter_by(id=cloud_id).first()
 
     if not c:
         flash(u'Not a valid Cloud ID!')
@@ -214,7 +202,7 @@ def create_cloud():
         elif not request.form['admin_key']:
             flash(u'Error: All fields are required')
         else:
-            c = db.Cloud()
+            c = Cloud()
             c.user_id = g.user.id
             c.label = request.form['label']
             c.endpoint = request.form['endpoint']
@@ -278,8 +266,9 @@ def logout():
 
 @app.route('/test-cloud/<int:cloud_id>', methods=['GET', 'POST'])
 def test_cloud(cloud_id):
-    c = db.Cloud.query.filter_by(id=cloud_id).first()
+    """Handler for creating a new test."""
 
+    c = Cloud.query.filter_by(id=cloud_id).first()
     if not c:
         flash(u'Not a valid Cloud ID!')
         return redirect('/')
@@ -287,14 +276,8 @@ def test_cloud(cloud_id):
         flash(u"This isn't your cloud!")
 
     if request.method == 'POST':
-        #validate this biotch
-        if not request.form['label']:
-            flash(u'Error: All fields are required')
-        elif not request.form['pw_user']:
-            flash(u'Error: All fields are required')
-        elif not request.form['pw_admin']:
-            flash(u'Error: All fields are required')
-        elif not request.form['pw_alter_user']:
+        REQUIRED_FIELDS = ('label', 'pw_admin', 'pw_user', 'pw_alter_user')
+        if not all(field in request.form for field in REQUIRED_FIELDS):
             flash(u'Error: All fields are required')
         else:
             ''' Construct confJSON with the passwords provided '''
@@ -312,14 +295,14 @@ def test_cloud(cloud_id):
 
 
 @app.route('/get-script', methods=['GET'])
-def send_script():
+def get_script():
     """Return a generic python script to be run in the docker container."""
 
     return send_file('tools/execute_test.py', mimetype='text/plain')
 
 
 @app.route('/get-miniconf', methods=['GET'])
-def send_miniconf():
+def get_miniconf():
     """Return a JSON of mini tempest conf to the docker container."""
 
     test_id = request.args.get('test_id', '')
@@ -330,7 +313,7 @@ def send_miniconf():
 
 
 @app.route('/get-testcases', methods=['GET'])
-def send_testcases():
+def get_testcases():
     """Return a JSON of tempest test cases to the docker container."""
 
     test_id = request.args.get('test_id', '')
@@ -341,14 +324,14 @@ def send_testcases():
 
 
 @app.route('/post-result', methods=['POST'])
-def receive_result():
+def post_result():
     """Receive tempest test result from the docker container."""
 
-    test_id = request.args.get('test_id', '')
-    filename = '%s/test_%s.result' % (RefStackConfig().get_working_dir(),
-                                      test_id)
     f = request.files['file']
     if f:
+        test_id = request.args.get('test_id', '')
+        filename = '%s/test_%s.result' % (RefStackConfig().get_working_dir(),
+                                          test_id)
         f.save(filename)
         TempestTester(test_id).process_resultfile(filename)
         ''' TODO: Remove the uploaded file after processing '''

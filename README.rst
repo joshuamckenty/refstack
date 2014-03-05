@@ -22,7 +22,8 @@ This is our documentation for how we get this set up::
   # PROTIP: if you just want to test this out, use `-n alembic_sqlite` to
   #         make a local sqlite db
   #         $ alembic -n alembic_sqlite upgrade head
-  alembic update head
+
+  alembic upgrade head
 
   # Plug this bad boy into your server infrastructure.
   # We use nginx and gunicorn, you may use something else if you are smarter
