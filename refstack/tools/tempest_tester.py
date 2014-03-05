@@ -15,11 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from docker_buildfile import DockerBuildFile
 import json
 import os
-from refstack.refstack_config import RefStackConfig
+import subprocess
 import time
+
+from refstack.utils import PROJECT_ROOT
+from refstack.refstack_config import RefStackConfig
 
 configData = RefStackConfig()
 
@@ -86,24 +88,19 @@ class TempestTester(object):
 
     def execute_test(self, extraConfJSON=None):
         '''Execute the tempest test with the provided extraConfJSON.'''
-
-        dockerFile = '%s/test_%s.dockerFile' % (configData.get_working_dir(),
-                                                self.test_id)
-
-        ''' Create the docker build file '''
-        fileBuilder = DockerBuildFile()
-        fileBuilder.test_id = self.test_id
-        fileBuilder.api_server_address = APP_ADDRESS
-        fileBuilder.tempest_code_url = TEMPEST_URL
-        fileBuilder.confJSON = extraConfJSON
-        fileBuilder.build_docker_buildfile(dockerFile)
+        
+        os.environ['TEST_ID'] = self.test_id
+        os.environ['APP_ADDRESS'] = configData.get_app_address()
+        os.environ['THE_TEMPEST_CODE_URL'] = configData.get_tempest_url()
+        
+        #TODO(JMC): Push the rest of the config JSON into ENV here...
+        os.environ['DOCKER_HOST'] = 'tcp://localhost:4243'
 
         ''' Execute the docker build file '''
         outFile = '%s/test_%s.dockerOutput' % (configData.get_working_dir(),
                                                self.test_id)
-        cmd = 'nohup docker build - < %s > %s &' % (dockerFile, outFile)
-        os.environ['DOCKER_HOST'] = 'tcp://localhost:4243'
-        os.system(cmd)
+        cmd = 'nohup docker build . > %s &' % (outFile)
+        subprocess.call(cmd, env=os.environ, shell=True, cwd=PROJECT_ROOT)
         print cmd
 
-        ''' TODO: Clean up the temporary docker build and output file '''
+        #TODO(JMC): Clean up the temporary docker build and output file
