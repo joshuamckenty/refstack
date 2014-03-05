@@ -19,16 +19,10 @@ import flask
 from flask import abort, flash, request, redirect, url_for, \
     render_template, g, session, make_response, send_file
 
-#from flask_openid import OpenID
-#from flask.ext.admin import Admin, BaseView, expose, AdminIndexView
-#from flask.ext.admin.contrib.sqlamodel import ModelView
-#from flask.ext.security import Security, \
-#    UserMixin, login_required
-#from wtforms import TextField
-import flask
 from flask import g, session, render_template
 from flask_mail import Mail
 
+import json
 from refstack import app as base_app
 from refstack.extensions import db
 from refstack.extensions import oid
@@ -38,7 +32,7 @@ from refstack.models import Vendor
 from refstack.refstack_config import RefStackConfig
 from refstack.tools.tempest_tester import TempestTester
 
-#from refstack.models import Cloud
+from refstack.models import Cloud
 
 
 # TODO(termie): transition all the routes below to blueprints
@@ -60,13 +54,11 @@ def before_request():
 @app.route('/', methods=['POST', 'GET'])
 def index():
     """Index view."""
+    vendors = Vendor.query.all()
+    clouds = []
     if g.user is not None:
-        # something else
         clouds = Cloud.query.filter_by(user_id=g.user.id).all()
-        return render_template('home.html', clouds=clouds)
-    else:
-        vendors = Vendor.query.all()
-        return render_template('index.html', vendors=vendors)
+    return render_template('index.html', vendors=vendors, clouds=clouds)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -128,7 +120,7 @@ def create_profile():
 @app.route('/delete-cloud/<int:cloud_id>', methods=['GET', 'POST'])
 def delete_cloud(cloud_id):
     """Delete function for clouds."""
-    c = db.Cloud.query.filter_by(id=cloud_id).first()
+    c = Cloud.query.filter_by(id=cloud_id).first()
 
     if not c:
         flash(u'Not a valid Cloud ID!')
@@ -143,7 +135,7 @@ def delete_cloud(cloud_id):
 
 @app.route('/edit-cloud/<int:cloud_id>', methods=['GET', 'POST'])
 def edit_cloud(cloud_id):
-    c = db.Cloud.query.filter_by(id=cloud_id).first()
+    c = Cloud.query.filter_by(id=cloud_id).first()
 
     if not c:
         flash(u'Not a valid Cloud ID!')
@@ -214,7 +206,7 @@ def create_cloud():
         elif not request.form['admin_key']:
             flash(u'Error: All fields are required')
         else:
-            c = db.Cloud()
+            c = Cloud()
             c.user_id = g.user.id
             c.label = request.form['label']
             c.endpoint = request.form['endpoint']
@@ -278,7 +270,7 @@ def logout():
 
 @app.route('/test-cloud/<int:cloud_id>', methods=['GET', 'POST'])
 def test_cloud(cloud_id):
-    c = db.Cloud.query.filter_by(id=cloud_id).first()
+    c = Cloud.query.filter_by(id=cloud_id).first()
 
     if not c:
         flash(u'Not a valid Cloud ID!')
@@ -292,22 +284,23 @@ def test_cloud(cloud_id):
             flash(u'Error: All fields are required')
         elif not request.form['pw_user']:
             flash(u'Error: All fields are required')
-        elif not request.form['pw_admin']:
-            flash(u'Error: All fields are required')
-        elif not request.form['pw_alter_user']:
-            flash(u'Error: All fields are required')
+        # elif not request.form['pw_admin']:
+        #    flash(u'Error: All fields are required')
+        # elif not request.form['pw_alter_user']:
+        #    flash(u'Error: All fields are required')
         else:
             ''' Construct confJSON with the passwords provided '''
-            pw_admin = request.form['pw_admin']
-            pw_user = request.form['pw_user']
-            pw_alt = request.form['pw_alter_user']
-            jstr = '{"identity":{"password":"%s","admin_password":"%s",\
-"alt_password":"%s"}}' % (pw_user, pw_admin, pw_alt)
-            TempestTester().test_cloud(cloud_id, jstr)
+            params = {}
+            params['identity'] = {}
+            params['identity']['password'] = request.form['pw_user']
+            params['identity']['admin_password'] = request.form.get('pw_admin', '')
+            params['identity']['alt_password'] = request.form.get('pw_alter_user', '')
+
+            TempestTester().test_cloud(cloud_id, json.dumps(params))
 
             flash(u'Test Started!')
             return redirect('/')
-
+    #TODO(JMC): This should be using a wtforms form instead.
     return render_template('test_cloud.html', next_url='/')
 
 

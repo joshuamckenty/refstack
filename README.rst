@@ -37,22 +37,13 @@ This is our documentation for how we get this set up::
 
   # Now browse to http://localhost:8000
 
-
-Configuration
--------------
-
-Coming soon!
-
-TODO:
-=====
-
-Metadata gathering:
- - Number of nodes
- - vCPUs
- - Distro
- - Deployment approach
- - RAM
-
-Plugins:
- - Cinder
- - Neutron
+Project Info
+============
+Web-site: http://refstack.org
+Source Code: http://github.com/stackforge/refstack
+Wiki: https://wiki.openstack.org/wiki/RefStack
+Launchpad: https://launchpad.net/refstack
+Blueprints: https://blueprints.launchpad.net/refstack
+Bugs: https://bugs.launchpad.net/refstack
+Code Reviews: https://review.openstack.org/#q,status:open+refstack,n,z
+IRC: #refstack at freenode
