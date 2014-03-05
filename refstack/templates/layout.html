@@ -92,8 +92,19 @@
           {% block body %}{% endblock %}
           </div>
   		</div>
+	<div class="inner_container footer">
+
+	Why don't you <a href="https://launchpad.net/refstack">contribute to refstack</a>?
+	 | For some details, <a href="https://wiki.openstack.org/wiki/RefStack">specifications are here.</a><br/>
+	This project supports <a href="https://wiki.openstack.org/wiki/Governance/DefCoreCommittee">the DefCore committee of the OpenStack foundation.</a><br/>
+	<a href="irc://irc.freenode.net/channel?#refstack">#refstack</a> on freenode.
+</div>
+
+	</div>
+
   	</div>
     {% block tail_js %}{% endblock %}
+
     <script src="{{ url_for('static', filename='refstack.js') }}"></script>
   </body>
 </html>

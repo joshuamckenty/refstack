@@ -15,9 +15,13 @@
 #
 
 import flask
+import json
+
 from flask import abort, flash, request, redirect, url_for, \
     render_template, g, session, make_response, send_file
+
 from flask_mail import Mail
+
 from refstack import app as base_app
 from refstack.extensions import db
 from refstack.extensions import oid
@@ -26,6 +30,7 @@ from refstack.models import User
 from refstack.models import Vendor
 from refstack.models import Test
 from refstack.tools.tempest_tester import TempestTester
+
 
 app = base_app.create_app()
 mail = Mail(app)
@@ -45,13 +50,11 @@ def before_request():
 @app.route('/', methods=['POST', 'GET'])
 def index():
     """Index view."""
+    vendors = Vendor.query.all()
+    clouds = []
     if g.user is not None:
-        # something else
         clouds = Cloud.query.filter_by(user_id=g.user.id).all()
-        return render_template('home.html', clouds=clouds)
-    else:
-        vendors = Vendor.query.all()
-        return render_template('index.html', vendors=vendors)
+    return render_template('index.html', vendors=vendors, clouds=clouds)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -273,18 +276,19 @@ def test_cloud(cloud_id):
             flash(u'Error: All fields are required')
         else:
             ''' Construct confJSON with the passwords provided '''
-            pw_admin = request.form['pw_admin']
-            pw_user = request.form['pw_user']
-            # Using the same user for alt_user
-            pw_alt = request.form['pw_user']
-            jstr = '{"identity":{"password":"%s","admin_password":"%s",\
-"alt_password":"%s"}}' % (pw_user, pw_admin, pw_alt)
-            TempestTester().test_cloud(cloud_id, jstr)
+            params = {}
+            identity = {}
+            identity['password'] = request.form['pw_user']
+            identity['admin_password'] = request.form.get('pw_admin', '')
+            identity['alt_password'] = request.form.get('pw_alter_user', '')
+            params['identity'] = identity
+
+            TempestTester().test_cloud(cloud_id, json.dumps(params))
             flash(u'Test Started!')
             return redirect('/')
 
+    #TODO(JMC): This should be using a wtforms form instead.
     names = dict(user=c.test_user, admin=c.admin_user)
-
     return render_template('test_cloud.html', next_url='/', names=names)
 
 

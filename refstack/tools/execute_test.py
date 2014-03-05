@@ -38,11 +38,11 @@ class Test:
         else:
             logging.basicConfig(level=logging.CRITICAL, format=_format)
         self.logger = logging.getLogger("execute_test")
+        
+        self.args = args
 
-        self.app_server_address = None
-        self.test_id = None
-        if args.callback:
-            self.app_server_address, self.test_id = args.callback
+        self.app_server_address = args['APP_ADDRESS']
+        self.test_id = args['TEST_ID']
 
         self.extraConfDict = dict()
         if args.conf_json:
@@ -74,7 +74,8 @@ class Test:
         self.logger.info('Generating tempest.config')
         miniConfDict = json.loads(self.getMiniConfig())
         self.mergeToSampleConf(miniConfDict)
-        self.mergeToSampleConf(self.extraConfDict)
+        # self.mergeToSampleConf(self.extraConfDict)
+        self.mergeToSampleConf({'identity' : self.args})
         self.sampleConfParser.write(open(self.tempestConfFile, 'w'))
 
     def mergeToSampleConf(self, dic):
@@ -202,43 +203,21 @@ class Test:
 
 if __name__ == '__main__':
     ''' Generate tempest.conf from a tempest.conf.sample and then run test
+    cases.
+    Example:
+        execute_test.py
+
     '''
-    parser = argparse.ArgumentParser(description='Starts a tempest test',
-                                     formatter_class=argparse.
-                                     ArgumentDefaultsHelpFormatter)
-    conflictGroup = parser.add_mutually_exclusive_group()
+    #TODO(JMC): Will support command-line override of ENV later...
+    mapping = [
+        ("APP_ADDRESS", "APP_ADDRESS"),
+        ("APP_ADDRESS", "app_address"), 
+        ("TEST_ID", "TEST_ID"),
+        ("OS_TENANT_NAME", "tenant_name"),
+        ("OS_USERNAME", "username"),
+        ("OS_PASSWORD", "password"),
+        ("OS_AUTH_URL", "uri")]
 
-    conflictGroup.add_argument("--callback",
-                               nargs=2,
-                               metavar=("APP_SERVER_ADDRESS", "TEST_ID"),
-                               type=str,
-                               help="refstack API IP address and test ID to\
-                               retrieve configurations. i.e.:\
-                               --callback 127.0.0.1:8000 1234")
-
-    parser.add_argument("--tempest-home",
-                        help="tempest directory path")
-
-    #with nargs, arguments are returned as a list
-    conflictGroup.add_argument("--testcases",
-                               nargs='+',
-                               help="tempest test cases. Use space to separate\
-                               each testcase")
-    '''
-    TODO: May need to decrypt/encrypt password in args.JSON_CONF
-    '''
-    parser.add_argument("--conf-json",
-                        type=json.loads,
-                        help="tempest configurations in JSON string")
-
-    parser.add_argument("-v", "--verbose",
-                        action="store_true",
-                        help="show verbose output")
-
-    args = parser.parse_args()
-
-    if len(sys.argv) == 1:
-        parser.print_help()
-    else:
-        test = Test(args)
-        test.run()
+    args = {key : os.environ[envkey] for (envkey, key) in mapping}
+    test = Test(args)
+    test.run()

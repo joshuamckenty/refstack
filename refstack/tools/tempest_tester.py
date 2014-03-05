@@ -14,13 +14,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from docker_buildfile import DockerBuildFile
 import json
 import os
+import subprocess
+import time
+
 from refstack.extensions import db
 from refstack.models import Cloud
 from refstack.models import Test
 from refstack.refstack_config import RefStackConfig
+
+from refstack.utils import PROJECT_ROOT
 
 configData = RefStackConfig()
 
@@ -173,27 +177,22 @@ class TempestTester(object):
     def _execute_test_docker(self, extraConfJSON=None):
         '''Execute the tempest test in a docker container.'''
 
-        ''' Create the docker build file '''
-        dockerFile = os.path.join(configData.get_working_dir(),
-                                  'test_%s.dockerFile' % self.test_id)
-        fileBuilder = DockerBuildFile()
-        fileBuilder.test_id = self.test_id
-        fileBuilder.api_server_address = configData.get_app_address()
-        ''' TODO: Determine tempest URL based on the cloud version '''
-        ''' ForNow: Use the Tempest URL in the config file '''
-        fileBuilder.tempest_code_url = configData.get_tempest_url()
-        fileBuilder.confJSON = extraConfJSON
-        fileBuilder.build_docker_buildfile(dockerFile)
+        os.environ['TEST_ID'] = self.test_id
+        #TODO(JMC): Consider using the local IP for this instead?
+        os.environ['APP_ADDRESS'] = configData.get_app_address()
+        os.environ['THE_TEMPEST_CODE_URL'] = configData.get_tempest_url()
+        os.environ['DOCKER_HOST'] = 'tcp://localhost:4243'
 
-        ''' Execute the docker build file '''
         outFile = os.path.join(configData.get_working_dir(),
-                               'test_%s.dockerOutput' % self.test_id)
-
-        cmd = 'nohup docker build - < %s > %s &' % (dockerFile, outFile)
-        os.system(cmd)
+        outFile = '%s/test_%s.dockerOutput' % (configData.get_working_dir(),
+                                        'test_%s.dockerOutput' % self.test_id)
+        envs = ["""-e %s="%s" """ % \
+                    (key, os.environ[key]) for key in os.environ]
+        cmd = "nohup docker build -t myrefstack ."
+        cmd += " && docker run %s myrefstack > %s &" % \
+                    ("".join(envs), outFile)
+        subprocess.call(cmd, env=os.environ, shell=True, cwd=PROJECT_ROOT)
         print cmd
-
-        ''' TODO: Clean up the temporary docker build and output file '''
 
     def _execute_test_local(self, extraConfJSON=None):
         '''Execute the tempest test locally.'''
