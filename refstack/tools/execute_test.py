@@ -27,8 +27,9 @@ import argparse
 
 class Test:
     def __init__(self, args):
-        self.api_ip = args.API_IP
-        self.test_id = args.TEST_ID
+        self.args = args
+        self.api_ip = args['APP_ADDRESS']
+        self.test_id = args['TEST_ID']
         '''
         Static variables
         TODO: future implementation may read some static variables from the
@@ -54,9 +55,8 @@ class Test:
             then replace values in the tempest sample config
         '''
         self.miniConfDict = json.loads(self.getMiniConfig())
-        self.extraConfDict = json.loads(args.JSON_CONF)
         self._mergeToSampleConf(self.miniConfDict)
-        self._mergeToSampleConf(self.extraConfDict)
+        self._mergeToSampleConf({'identity' : self.args})
 
     def _mergeToSampleConf(self, new):
         for section in new:
@@ -145,23 +145,23 @@ class Test:
 
 if __name__ == '__main__':
     ''' Generate tempest.conf from a tempest.conf.sample and then run test
-    cases docker-script.py test_id test_user_pw admin_pw alter_user_pw api_IP
+    cases.
     Example:
-        execute_test.py 172.42.17.1:8000 1 '{"section":{"key":"value",..}}'
+        execute_test.py
 
     '''
-    parser = argparse.ArgumentParser(description='Starts a tempest test \
-                                    associated with a test_id')
-    parser.add_argument("API_IP",
-                        help="refstack API server IP to retrieve \
-                        configurations. i.e.: 127.0.0.1:8000")
-    parser.add_argument("TEST_ID",
-                        help="test ID associated with a test")
-    '''
-    TODO: Need to decrypt/encrypt password in the json string (args.JSON_CONF)
-    '''
-    parser.add_argument("JSON_CONF",
-                             help="Tempest Configurations in JSON string")
-    args = parser.parse_args()
+    #TODO(JMC): Will support command-line override of ENV later...
+    # args = {}
+    # args = {key : os.environ[key] for key in ['APP_ADDRESS', 'TEST_ID']}
+    mapping = [
+        ("APP_ADDRESS", "APP_ADDRESS"),
+        ("APP_ADDRESS", "app_address"), 
+        ("TEST_ID", "TEST_ID"),
+        ("OS_TENANT_NAME", "tenant_name"),
+        ("OS_USERNAME", "username"),
+        ("OS_PASSWORD", "password"),
+        ("OS_AUTH_URL", "uri")]
+
+    args = {key : os.environ[envkey] for (envkey, key) in mapping}
     test = Test(args)
     test.run()

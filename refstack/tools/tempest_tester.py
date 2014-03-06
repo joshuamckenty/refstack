@@ -90,16 +90,16 @@ class TempestTester(object):
         '''Execute the tempest test with the provided extraConfJSON.'''
         
         os.environ['TEST_ID'] = self.test_id
+        #TODO(JMC): Consider using the local IP for this instead?
         os.environ['APP_ADDRESS'] = configData.get_app_address()
         os.environ['THE_TEMPEST_CODE_URL'] = configData.get_tempest_url()
-        
-        #TODO(JMC): Push the rest of the config JSON into ENV here...
         os.environ['DOCKER_HOST'] = 'tcp://localhost:4243'
 
         ''' Execute the docker build file '''
         outFile = '%s/test_%s.dockerOutput' % (configData.get_working_dir(),
                                                self.test_id)
-        cmd = 'nohup docker build . > %s &' % (outFile)
+        envs = ["-e %s=\"%s\"" % (key, os.environ[key]) for key in os.environ]
+        cmd = 'nohup docker build -t myrefstack . && docker run %s myrefstack > %s &' % (" ".join(envs), outFile)
         subprocess.call(cmd, env=os.environ, shell=True, cwd=PROJECT_ROOT)
         print cmd
 
