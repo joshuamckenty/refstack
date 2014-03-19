@@ -3,6 +3,7 @@
 import os
 import subprocess
 
+from refstack import app as base_app
 from refstack.tools.tempest_tester import TempestTester
 
 if __name__ == "__main__":
@@ -13,5 +14,8 @@ if __name__ == "__main__":
     
     #TODO(JMC): Consider using PIPE instead, ala 
     # http://stackoverflow.com/questions/13332268/python-subprocess-command-with-pipe
+
+    app = base_app.create_app()
+    app.test_request_context().push()
     test_id = "1000"
     TempestTester(test_id).execute_test()
